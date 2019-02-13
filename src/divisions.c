@@ -558,39 +558,38 @@ COMUN_FUNC_STATICA entero_largo_sin_signo primalidad_rand(
 	num_bins = (entero_largo_sin_signo) max + 1, num_rand =
 			(((entero_largo_sin_signo) RAND_MAX) << 32 | (0xffffffff)) + 1,
 			bin_size = num_rand / num_bins, defect = num_rand % num_bins;
-	comun_log_debug("max %llu num bins %llu num_rand %llu", max, num_bins,
-			num_rand);
+//	comun_log_debug("max %llu num bins %llu num_rand %llu", max, num_bins, num_rand);
 
 	entero_largo_sin_signo x;
 	do {
-		x = random();
-		comun_log_debug("num rand %llu - defec %llu = %llu y x %llu", num_rand,
-				defect, num_rand-defect, x);
+		x = (((entero_largo_sin_signo) rand()) << 32) | rand();
+//		comun_log_debug("num rand %llu - defec %llu = %llu y x %llu", num_rand, defect, num_rand-defect, x);
 	}
 	// This is carefully written not to overflow
 	while (num_rand - defect <= (entero_largo_sin_signo) x);
+//	comun_log_debug("finalmente x %llu bin size %llu", x, bin_size);
 
-	// Truncated division is intentional
+// Truncated division is intentional
 	return x / bin_size;
 }
 
 COMUN_FUNC_STATICA entero_largo_sin_signo primalidad_rand_intervalo(
 		entero_largo_sin_signo min, entero_largo_sin_signo max) {
-	comun_log_debug("rand intervalo min %llu max %llu", min, max);
+//	comun_log_debug("rand intervalo min %llu max %llu", min, max);
 	return (entero_largo_sin_signo) min + primalidad_rand(max - min);
 }
 
 COMUN_FUNC_STATICA bool primalidad_prueba_miller_rabbit(
 		entero_largo_sin_signo n) {
 	entero_largo_sin_signo a = primalidad_rand_intervalo(2, n - 2);
-	comun_log_debug("rand a %llu inter %llu-%llu", a, 2, n-2);
+//	comun_log_debug("rand a %llu inter %llu-%llu", a, 2, n-2);
 	entero_largo_sin_signo d = n - 1;
 	while (!(d & 1)) {
 		d >>= 1;
 	}
-	comun_log_debug("d %llu", d);
+//	comun_log_debug("d %llu", d);
 	entero_largo_sin_signo x = primalidad_exp_mod(a, d, n);
-	comun_log_debug("x %llu", x);
+//	comun_log_debug("x %llu", x);
 
 	if (x == 1 || x == (n - 1)) {
 		return verdadero;
@@ -617,30 +616,12 @@ COMUN_FUNC_STATICA bool primalidad_es_primo(entero_largo_sin_signo n, natural k)
 	}
 
 	while (k--) {
-		comun_log_debug("prueba %llu", n);
 		if (!primalidad_prueba_miller_rabbit(n)) {
 			return falso;
 		}
 	}
+	comun_log_debug("%llu es primo", n);
 	return verdadero;
-}
-
-COMUN_FUNC_STATICA void primalidad_main() {
-	natural t = 0;
-	scanf("%u\n", &t);
-	while (t--) {
-		entero_largo_sin_signo n = 0;
-		scanf("%llu\n", &n);
-		comun_log_debug("probando %llu", n);
-		bool r = primalidad_es_primo(n, 300);
-		char *rs = NULL;
-		if (r) {
-			rs = "YES";
-		} else {
-			rs = "NO";
-		}
-		printf("%s\n", rs);
-	}
 }
 
 #endif
@@ -648,8 +629,8 @@ COMUN_FUNC_STATICA void primalidad_main() {
 #if 1
 
 //#define PRIMOS_NUM_MAX ((int)1E6)
-//#define PRIMOS_NUM_MAX 1081080
-#define PRIMOS_NUM_MAX 101
+#define PRIMOS_NUM_MAX 1081080
+//#define PRIMOS_NUM_MAX 101
 typedef struct primos_datos {
 	natural primos_criba_tam;
 	natural primos_criba[PRIMOS_NUM_MAX + 1];
@@ -722,13 +703,17 @@ typedef struct divisions_datos {
 	entero_largo_sin_signo num_divisores[DIVISIONS_MAX_LINEAR + 1];
 } divisions_datos;
 
-COMUN_FUNC_STATICA natural divisions_calcula_potencia_primo(natural n,
-		natural p) {
+COMUN_FUNC_STATICA natural divisions_calcula_potencia_primo(
+		entero_largo_sin_signo n, natural p,
+		entero_largo_sin_signo *complemento_contribucion_primo) {
 	natural i = 0;
 	natural n_orig = n;
 	while (!(n % p)) {
 		n /= p;
 		i++;
+	}
+	if (complemento_contribucion_primo) {
+		*complemento_contribucion_primo = n;
 	}
 	comun_log_debug("potencia primo de %u en %u es %u", p, n_orig, i);
 	return i;
@@ -743,7 +728,7 @@ void divisions_divisible_encontrado(natural primo, natural idx_primo,
 		natural compuesto, void *cb_ctx) {
 	divisions_datos *d = cb_ctx;
 	natural potencia_contribucion_primo = divisions_calcula_potencia_primo(
-			compuesto, primo);
+			compuesto, primo, NULL);
 	natural nuevo_compuesto = compuesto * primo;
 	entero_largo_sin_signo contribucion_primo = potencia_contribucion_primo + 1;
 	entero_largo_sin_signo complemento_contribucion_primo =
@@ -767,7 +752,81 @@ void divisions_no_divisible_encontrado(natural primo, natural idx_primo,
 			d->num_divisores[nuevo_compuesto]);
 }
 
-void divisions_main() {
+COMUN_FUNC_STATICA bool divisors_es_cuadratico(entero_largo_sin_signo n) {
+	entero_largo_sin_signo sqr = sqrt(n);
+	bool r = sqr * sqr == n;
+	comun_log_debug("n %llu sqr %llu", n, sqr);
+	assert_timeout(!r || primalidad_es_primo(sqr, 300));
+	return r;
+}
+
+COMUN_FUNC_STATICA entero_largo_sin_signo divisions_calcula_divisores_contribucion_primos_mayores(
+		entero_largo_sin_signo n) {
+	entero_largo_sin_signo r = 0;
+	if (n == 1) {
+		return 1;
+	}
+	comun_log_debug("contri de %llu", n);
+	if (primalidad_es_primo(n, 300)) {
+		r = 2;
+	} else {
+		if (divisors_es_cuadratico(n)) {
+			r = 3;
+		} else {
+			if (n != 1) {
+				r = 4;
+			} else {
+				r = 1;
+			}
+		}
+	}
+	return r;
+}
+
+COMUN_FUNC_STATICA entero_largo_sin_signo divisions_core(
+		entero_largo_sin_signo n, primos_datos *pd, divisions_datos *dd) {
+	if (n == 1) {
+		return 1;
+	}
+	natural raiz_cubica = pow(n, 1.0 / 3.0);
+	comun_log_debug("n %llu raiz cub %u", n, raiz_cubica);
+	entero_largo_sin_signo contribucion_primos_mayores = n;
+	entero_largo_sin_signo num_divisores_primos_menores = 1;
+	for (natural i = 0; i < PRIMOS_NUM_MAX; i++) {
+		natural primo = pd->primos_criba[i];
+		if (primo > raiz_cubica) {
+			break;
+		}
+		entero_largo_sin_signo num_divisores_act =
+				divisions_calcula_potencia_primo(contribucion_primos_mayores,
+						primo, &contribucion_primos_mayores);
+		if (num_divisores_act) {
+			num_divisores_primos_menores *= num_divisores_act + 1;
+		}
+	}
+	entero_largo_sin_signo contribucion_primos_menores = n
+			/ contribucion_primos_mayores;
+	comun_log_debug("contribucion primos mayores %llu menores %llu",
+			contribucion_primos_mayores, contribucion_primos_menores);
+	entero_largo_sin_signo divisores_contribucion_primos_menores =
+			divisores_contribucion_primos_menores =
+					num_divisores_primos_menores;
+	if (contribucion_primos_menores <= PRIMOS_NUM_MAX) {
+		assert_timeout(
+				num_divisores_primos_menores
+						== dd->num_divisores[contribucion_primos_menores])
+	}
+	entero_largo_sin_signo divisores_contribucion_primos_mayores =
+			divisions_calcula_divisores_contribucion_primos_mayores(
+					contribucion_primos_mayores);
+	comun_log_debug("divisores menores %llu mayores %llu",
+			divisores_contribucion_primos_menores,
+			divisores_contribucion_primos_mayores);
+	return divisores_contribucion_primos_menores
+			* divisores_contribucion_primos_mayores;
+}
+
+COMUN_FUNC_STATICA void divisions_main() {
 	primos_datos *pd = NULL;
 	divisions_datos *dd = NULL;
 
@@ -779,9 +838,28 @@ void divisions_main() {
 	natural primos_tam = primos_criba_criba(PRIMOS_NUM_MAX,
 			divisions_primo_encontrado, NULL, divisions_divisible_encontrado,
 			divisions_no_divisible_encontrado, dd, pd);
+//	for (natural i = 1; i <= PRIMOS_NUM_MAX; i++) {
+//		comun_log_debug("d[%u]=%llu", i, dd->num_divisores[i]);
+//	}
+
 	for (natural i = 1; i <= PRIMOS_NUM_MAX; i++) {
-		comun_log_debug("d[%u]=%llu", i, dd->num_divisores[i]);
+		entero_largo rc = divisions_core(i, pd, dd);
+		entero_largo rs = dd->num_divisores[i];
+		comun_log_debug("d[%u]=%llu,%llu", i, rc, rs);
+		printf("d[%u]=%llu,%llu\n", i, rc, rs);
+		assert_timeout(rc == rs);
 	}
+
+//	entero_largo_sin_signo n = 0;
+//	scanf("%llu\n", &n);
+//
+//	entero_largo_sin_signo r = divisions_core(n, pd, dd);
+//	if (n <= DIVISIONS_MAX_LINEAR) {
+//		entero_largo_sin_signo rs = dd->num_divisores[n];
+//		printf("d[%u]=%llu,%llu\n", (natural) n, r, rs);
+//	}
+//	comun_log_debug("%llu", r);
+//	printf("%llu\n", r);
 }
 
 int main(void) {
