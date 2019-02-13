@@ -74,11 +74,11 @@ typedef enum BOOLEANOS {
 	falso = 0, verdadero
 } bool;
 
+#define COMUN_TIPO_ASSERT COMUN_ASSERT_SUAVECITO
 /*
- #define COMUN_TIPO_ASSERT COMUN_ASSERT_SUAVECITO
+ #define COMUN_TIPO_ASSERT COMUN_ASSERT_DUROTE
  #define COMUN_TIPO_ASSERT COMUN_ASSERT_NIMADRES
  */
-#define COMUN_TIPO_ASSERT COMUN_ASSERT_DUROTE
 
 #define assert_timeout_dummy(condition) 0;
 
@@ -553,24 +553,10 @@ COMUN_FUNC_STATICA entero_largo_sin_signo primalidad_exp_mod(
 // XXX: https://stackoverflow.com/questions/2509679/how-to-generate-a-random-integer-number-from-within-a-range
 COMUN_FUNC_STATICA entero_largo_sin_signo primalidad_rand(
 		entero_largo_sin_signo max) {
-	entero_largo_sin_signo
-	// max <= RAND_MAX < ULONG_MAX, so this is okay.
-	num_bins = (entero_largo_sin_signo) max + 1, num_rand =
-			(((entero_largo_sin_signo) RAND_MAX) << 32 | (0xffffffff)) + 1,
-			bin_size = num_rand / num_bins, defect = num_rand % num_bins;
-//	comun_log_debug("max %llu num bins %llu num_rand %llu", max, num_bins, num_rand);
-
-	entero_largo_sin_signo x;
-	do {
-		x = (((entero_largo_sin_signo) rand()) << 32) | rand();
+	entero_largo_sin_signo x = (((entero_largo_sin_signo) rand()) << 32)
+			| rand();
 //		comun_log_debug("num rand %llu - defec %llu = %llu y x %llu", num_rand, defect, num_rand-defect, x);
-	}
-	// This is carefully written not to overflow
-	while (num_rand - defect <= (entero_largo_sin_signo) x);
-//	comun_log_debug("finalmente x %llu bin size %llu", x, bin_size);
-
-// Truncated division is intentional
-	return x / bin_size;
+	return x % max;
 }
 
 COMUN_FUNC_STATICA entero_largo_sin_signo primalidad_rand_intervalo(
@@ -812,9 +798,7 @@ COMUN_FUNC_STATICA entero_largo_sin_signo divisions_core(
 			divisores_contribucion_primos_menores =
 					num_divisores_primos_menores;
 	if (contribucion_primos_menores <= PRIMOS_NUM_MAX) {
-		assert_timeout(
-				num_divisores_primos_menores
-						== dd->num_divisores[contribucion_primos_menores])
+//		assert_timeout( num_divisores_primos_menores == dd->num_divisores[contribucion_primos_menores]);
 	}
 	entero_largo_sin_signo divisores_contribucion_primos_mayores =
 			divisions_calcula_divisores_contribucion_primos_mayores(
@@ -842,24 +826,24 @@ COMUN_FUNC_STATICA void divisions_main() {
 //		comun_log_debug("d[%u]=%llu", i, dd->num_divisores[i]);
 //	}
 
-	for (natural i = 1; i <= PRIMOS_NUM_MAX; i++) {
-		entero_largo rc = divisions_core(i, pd, dd);
-		entero_largo rs = dd->num_divisores[i];
-		comun_log_debug("d[%u]=%llu,%llu", i, rc, rs);
-		printf("d[%u]=%llu,%llu\n", i, rc, rs);
-		assert_timeout(rc == rs);
-	}
+//	for (natural i = 1; i <= PRIMOS_NUM_MAX; i++) {
+//		entero_largo rc = divisions_core(i, pd, dd);
+//		entero_largo rs = dd->num_divisores[i];
+//		comun_log_debug("d[%u]=%llu,%llu", i, rc, rs);
+//		printf("d[%u]=%llu,%llu\n", i, rc, rs);
+//		assert_timeout(rc == rs);
+//	}
 
-//	entero_largo_sin_signo n = 0;
-//	scanf("%llu\n", &n);
-//
-//	entero_largo_sin_signo r = divisions_core(n, pd, dd);
+	entero_largo_sin_signo n = 0;
+	scanf("%llu\n", &n);
+
+	entero_largo_sin_signo r = divisions_core(n, pd, dd);
 //	if (n <= DIVISIONS_MAX_LINEAR) {
 //		entero_largo_sin_signo rs = dd->num_divisores[n];
 //		printf("d[%u]=%llu,%llu\n", (natural) n, r, rs);
 //	}
-//	comun_log_debug("%llu", r);
-//	printf("%llu\n", r);
+	comun_log_debug("%llu", r);
+	printf("%llu\n", r);
 }
 
 int main(void) {
